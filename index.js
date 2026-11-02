@@ -22,7 +22,7 @@ export async function connectToMongoDB() {
 
 const connectedClient=await connectToMongoDB()
 const db=connectedClient.db('together-we')
-const eventCollection=db.collection('events')
+const eventsCollection=db.collection('events')
 
 
 
@@ -33,9 +33,28 @@ app.get("/", (req, res) => {
 app.post('/events/create',async(req,res)=>{
   console.log('from client', req.body);
   const event=req.body
-    const result=await eventCollection.insertOne(event)
+    const result=await eventsCollection.insertOne(event)
     res.send(result)
 })
+
+app.get("/events", async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    const events = await eventsCollection
+      .find({
+        eventDate: { $gte: today },
+      })
+      .sort({ eventDate: 1 })
+      .toArray();
+
+    res.send(events);
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to fetch events",
+    });
+  }
+});
 
 app.listen(PORT,()=>{
   console.log(`server is running in port ${PORT}`);
