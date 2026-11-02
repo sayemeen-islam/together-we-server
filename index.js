@@ -56,6 +56,12 @@ app.get("/events", async (req, res) => {
   }
 });
 
+app.get('/event/:id',async(req,res)=>{
+  const id=req.params.id
+  const event=await eventsCollection.findOne({_id:new ObjectId(id)})
+  res.send(event)
+})
+
 app.listen(PORT,()=>{
   console.log(`server is running in port ${PORT}`);
   
