@@ -215,7 +215,37 @@ app.delete('/manage-events/:id', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/events/recent', async (req, res) => {
+  const today = new Date().toISOString().split("T")[0];
 
+  const events = await eventsCollection
+    .find({ eventDate: { $gte: today } })
+    .sort({ eventDate: 1 })
+    .limit(6)
+    .toArray();
+
+  res.send(events);
+});
+
+app.get("/events/recent", async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    const events = await eventsCollection
+      .find({
+        eventDate: { $gte: today },
+      })
+      .sort({ eventDate: 1 })
+      .limit(6)
+      .toArray();
+
+    res.send(events);
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to fetch events",
+    });
+  }
+});
 
 app.listen(PORT,()=>{
   console.log(`server is running in port ${PORT}`);
