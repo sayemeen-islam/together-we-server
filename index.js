@@ -187,6 +187,35 @@ app.patch('/manage-events/:id', verifyToken, async (req, res) => {
 });
 
 
+app.delete('/manage-events/:id', verifyToken, async (req, res) => {
+  try {
+    const eventId = new ObjectId(req.params.id);
+
+    const result = await eventsCollection.deleteOne({
+      _id: eventId,
+      email: req.user.email,
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({
+        message: "Event not found",
+      });
+    }
+
+    // Remove related joined-event records
+    await joinedEventsCollection.deleteMany({ eventId });
+
+    res.send({
+      message: "Event deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to delete event",
+    });
+  }
+});
+
+
 
 app.listen(PORT,()=>{
   console.log(`server is running in port ${PORT}`);
