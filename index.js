@@ -134,7 +134,34 @@ app.post('/join', verifyToken, async (req, res) => {
   res.send(result);
 });
 
+// Get Joined Events (Private)
+app.get('/joined-events', verifyToken, async (req, res) => {
+  const joinedEvents = await joinedEventsCollection.aggregate([
+    {
+      $match: {
+        userEmail: req.user.email
+      }
+    },
+    {
+      $lookup: {
+        from: 'events',
+        localField: 'eventId',
+        foreignField: '_id',
+        as: 'event'
+      }
+    },
+    {
+      $unwind: '$event'
+    },
+    {
+      $sort: {
+        'event.eventDate': 1
+      }
+    }
+  ]).toArray();
 
+  res.send(joinedEvents);
+});
 
 app.listen(PORT,()=>{
   console.log(`server is running in port ${PORT}`);
