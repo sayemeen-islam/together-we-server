@@ -163,6 +163,16 @@ app.get('/joined-events', verifyToken, async (req, res) => {
   res.send(joinedEvents);
 });
 
+app.get('/manage-events', verifyToken, async (req, res) => {
+  const events = await eventsCollection
+    .find({ email: req.user.email })
+    .toArray();
+
+  res.send(events);
+});
+
+
+
 app.listen(PORT,()=>{
   console.log(`server is running in port ${PORT}`);
 })
