@@ -166,9 +166,24 @@ app.get('/joined-events', verifyToken, async (req, res) => {
 app.get('/manage-events', verifyToken, async (req, res) => {
   const events = await eventsCollection
     .find({ email: req.user.email })
+    .sort({ eventDate: 1 })
     .toArray();
 
   res.send(events);
+});
+
+app.patch('/manage-events/:id', verifyToken, async (req, res) => {
+  const result = await eventsCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+      email: req.user.email,
+    },
+    {
+      $set: req.body,
+    }
+  );
+
+  res.send(result);
 });
 
 
