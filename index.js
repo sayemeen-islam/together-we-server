@@ -61,7 +61,8 @@ app.get("/", (req, res) => {
 
 // Create Event (Private)
 app.post('/events/create',verifyToken,async(req,res)=>{
-  const event = {
+try{
+    const event = {
     ...req.body,
     userName: req.user.name,
     email: req.user.email
@@ -69,6 +70,11 @@ app.post('/events/create',verifyToken,async(req,res)=>{
 
   const result=await eventsCollection.insertOne(event)
   res.send(result)
+}catch(error){
+  res.status(500).send({
+    message:"Failed to create event"
+  })
+}
 })
 
 // Get Upcoming Events (Public)
@@ -93,9 +99,22 @@ app.get("/events", async (req, res) => {
 
 // Get Event Details (Public)
 app.get('/event/:id',async(req,res)=>{
-  const id=req.params.id
+  try{
+    const id=req.params.id
+  
+  if (!ObjectId.isValid(id)) {
+      return res.status(404).json({
+        message: "Event not found",
+      });
+    }
 
   const event=await eventsCollection.findOne({_id:new ObjectId(id)})
+    
+  if (!event) {
+      return res.status(404).json({
+        message: "Event not found",
+      });
+    }
 
   const participantCount=await joinedEventsCollection.countDocuments({
     eventId:new ObjectId(id)
@@ -105,11 +124,17 @@ app.get('/event/:id',async(req,res)=>{
     ...event,
     participantCount
   })
+  }catch(error){
+    req.status(500).send({
+      message:"Failed to fetch event"
+    })
+  }
 })
 
 // Join Event (Private)
 app.post('/join', verifyToken, async (req, res) => {
-  const { eventId } = req.body;
+try{
+    const { eventId } = req.body;
 
   const alreadyJoined = await joinedEventsCollection.findOne({
     eventId: new ObjectId(eventId),
@@ -118,7 +143,7 @@ app.post('/join', verifyToken, async (req, res) => {
 
   if (alreadyJoined) {
     return res.status(409).send({
-      message: "You have already joined this event."
+      message: "You have already joined this event"
     });
   }
 
@@ -132,11 +157,18 @@ app.post('/join', verifyToken, async (req, res) => {
   const result = await joinedEventsCollection.insertOne(joinedEvent);
 
   res.send(result);
+} catch(error){
+  res.status(500).send({
+      message: "Failed to add event to the joinedEvents collection",
+    });
+}
 });
 
 // Get Joined Events (Private)
 app.get('/joined-events', verifyToken, async (req, res) => {
-  const joinedEvents = await joinedEventsCollection.aggregate([
+
+try{
+    const joinedEvents = await joinedEventsCollection.aggregate([
     {
       $match: {
         userEmail: req.user.email
@@ -159,21 +191,36 @@ app.get('/joined-events', verifyToken, async (req, res) => {
       }
     }
   ]).toArray();
-
   res.send(joinedEvents);
+} catch (error) {
+    res.status(500).send({
+      message: "Failed to fetch joined-events",
+    });
+  }
+
+
 });
 
+// Get Manage Events (Private)
 app.get('/manage-events', verifyToken, async (req, res) => {
-  const events = await eventsCollection
+try{
+    const events = await eventsCollection
     .find({ email: req.user.email })
     .sort({ eventDate: 1 })
     .toArray();
 
   res.send(events);
+}catch (error) {
+    res.status(500).send({
+      message: "Failed to fetch events",
+    });
+  }
 });
 
+// PATCH Manage Events (Private)
 app.patch('/manage-events/:id', verifyToken, async (req, res) => {
-  const result = await eventsCollection.updateOne(
+  try{
+    const result = await eventsCollection.updateOne(
     {
       _id: new ObjectId(req.params.id),
       email: req.user.email,
@@ -182,11 +229,17 @@ app.patch('/manage-events/:id', verifyToken, async (req, res) => {
       $set: req.body,
     }
   );
-
   res.send(result);
+
+  }catch (error) {
+    res.status(500).send({
+      message: "Failed to update event",
+    });
+  }
+
 });
 
-
+// DELETE Manage Events (Private)
 app.delete('/manage-events/:id', verifyToken, async (req, res) => {
   try {
     const eventId = new ObjectId(req.params.id);
@@ -202,7 +255,7 @@ app.delete('/manage-events/:id', verifyToken, async (req, res) => {
       });
     }
 
-    // Remove related joined-event records
+    
     await joinedEventsCollection.deleteMany({ eventId });
 
     res.send({
@@ -215,18 +268,7 @@ app.delete('/manage-events/:id', verifyToken, async (req, res) => {
   }
 });
 
-app.get('/events/recent', async (req, res) => {
-  const today = new Date().toISOString().split("T")[0];
-
-  const events = await eventsCollection
-    .find({ eventDate: { $gte: today } })
-    .sort({ eventDate: 1 })
-    .limit(6)
-    .toArray();
-
-  res.send(events);
-});
-
+// GET Recent 6 Events (Public)
 app.get("/events/recent", async (req, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
