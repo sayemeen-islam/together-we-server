@@ -66,7 +66,13 @@ app.post("/events/create", verifyToken, async (req, res) => {
       userName: req.user.name,
       email: req.user.email,
     };
+    const today = new Date().toLocaleDateString("en-CA");
 
+    if (!req.body.eventDate || req.body.eventDate < today) {
+      return res.status(400).send({
+        message: "Event date cannot be in the past",
+      });
+    }
     const result = await eventsCollection.insertOne(event);
     res.send(result);
   } catch (error) {
